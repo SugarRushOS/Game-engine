@@ -1,0 +1,164 @@
+=======================================================================================================================================================================================================
+
+    Documentation on all functions
+
+=======================================================================================================================================================================================================
+GXbitmap.h
+    GXtexture_t* loadBMPImage(const char path[]);
+        - Loads a BMP file from path and returns a pointer to GXtexture_t. Returns nullptr if file is not found. Prints error message if debugmode is set
+
+GXchecksum.h
+    GXchecksum_t checksum(void* ptr, GXsize_t size);
+        - Generates 8 bit checksum from data at ptr over size bytes. Checksum = NOT(sum of all bytes), so that the sum of all bytes + the checksum = 0.
+
+GXentity.h
+    GXentity_t* createEntity(GXsize_t flags);
+        - Creates an entity, assigns flags, and returns pointer to it.
+    
+    int drawEntity(GXentity_t* entity);
+        - Draws an entity if draw flag is set. If draw callback is valid and GXE_drawcallbackset flag is set, entity will call custom draw callback.
+
+    GXentity_t* loadEntity(const char path[]);
+        - Load an entity from a JSON file and place information in a GXentity.
+
+    int assignTexture(GXentity_t* entity, const char uniform[]);
+        - Assigns a texture to a glsl uniform.
+
+    int destroyEntity(GXentity_t* entity);
+        - Destroys the entity and all its contents.
+
+GXIDGen.h
+    GXsize_t GXIDGen();
+        -Generates an ID.
+
+GXJSON.h
+    int GXParseJSON(const char* text, size_t len, JSONValue_t* tokens, size_t tokenCount); 
+        - This function parses a JSON file and returns an array of JSONValue_t values. return = tokens parsed. When NULL is passed for tokens, return = token count.
+
+GXmesh.h
+    int unloadMesh(GXmesh_t* mesh);
+        - Destroys GXmesh_t at mesh and deallocates all associated data.
+
+GXobj.h
+    GXmesh_t* loadOBJMesh(const char path[]); 
+        - Loads an OBJ file from path and returns a pointer to GXmesh_t. Will load geometric coordinates, texture coordinates, and indicies.
+
+GXscene.h
+    GXscene_t* createScene();
+        - Create an empty scene.
+
+    GXscene_t* loadScene(const char path[]);
+        - Loads a scene and associate GXentities from a JSON file.
+
+    int appendEntity(GXscene_t* scene, GXentity_t* entity);
+        - Add an entity to the end of the linked list
+
+    int drawScene(GXscene_t* scene);
+        - Iterates through the scene drawing all valid entities where the GXEdrawable flag == 1, either calling default drawer or custom callback.
+
+    GXentity_t* getEntity(GXscene_t* scene, const char name[]);
+        - Searches for the specified entity and returns a pointer to it, else returns nullptr.
+
+    int removeEntity(GXscene_t* scene, const char name[]);
+        - Remove an entity by name from a scene and calls destroyEntity at location. Stiches the scene when complete to avoid trashing other entities.
+
+    int destroyScene(GXscene_t* scene);
+        - Destroy a scene and all of its contents
+
+GXshader.h
+    GXshader_t* loadShader(const char vertexShaderPath[], const char fragmentShaderPath[]);
+        - Loads a glsl vertex and glsl fragment shader from path and return a pointer to GXshader_t
+
+    int useShader(GXshader_t* shader);
+        - Uses an OpenGL shader program
+
+    void setShaderInt(GXshader_t* shader, const char name[], int value);
+        - TODO: Replace uniforms
+
+    void setShaderFloat(GXshader_t* shader, const char name[], float value);
+        - TODO: Replace uniforms
+
+    int unloadShader(GXshader_t* shader);
+        - Unloads a shader and deletes all its contents
+
+GXtexture.h
+    int unloadTexture(GXtexture_t* image);
+        - Unloads a texture and all of its contents
+
+=======================================================================================================================================================================================================
+
+    Scene, Entity, and Entity structure
+
+=======================================================================================================================================================================================================
+
+┌─────┐
+|Scene|
+└─────┘
+|
+↓
+┌────────┐     ┌────────┐             ┌────────┐
+|Entity 0├────>|Entity 1├────>...────>|Entity n├────>NULL
+└────────┘     └────────┘             └────────┘
+
+╒════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╕
+|                                                                                     Entity                                                                                     |
+╞════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╡
+| ┌──┐     ┌─────┐     ┌────┐     ┌────┐     ┌──────┐     ┌───────┐                                                                                                              | 
+| |ID├     |Flags|     |name|     |mesh|     |shader|     |Texture|                                                                                                              |
+| └──┘     └─────┘     └────┘     └────┘     └──────┘     └───────┘                                                                                                              |
+|                                 |          |            |                                                                                                                      |
+|                                 |          |            └──────────────────────────────────────────────────────┬───────────────┬───────────┬────────────┬────────┐             |
+|                                 |          |                                                                   |               |           |            |        |             |
+|                                 |          └────────────────────────────────────────────────────┐              |               |           |            |        |             |
+|                                 |                                                               |              |               |           |            |        |             |
+|                                 ├─────────┬────────────────────┬─────────┬────────┐             |              |               |           |            |        |             |
+|                                 ↓         ↓                    ↓         ↓        ↓             ↓              ↓               ↓           ↓            ↓        ↓             |
+|                                 ┌───┐     ┌────────────┐     ┌─────┐     ┌──┐     ┌───────┐     ┌────────┐     ┌─────────┐     ┌─────┐     ┌──────┐     ┌──┐     ┌─────────┐   |
+|                                 |VAO|     |vertexCounts|     |faces|     |ID|     |buffers|     |ShaderID|     |pixelData|     |width|     |height|     |ID|     |textureID|   |     
+|                                 └───┘     └────────────┘     └─────┘     └──┘     └───────┘     └────────┘     └─────────┘     └─────┘     └──────┘     └──┘     └─────────┘   |
+|                                 |                                                                                                                                              |
+|                                 ├─────────┬─────────┬───────────────┐                                                                                                          |
+|                                 ↓         ↓         ↓               ↓                                                                                                          |
+|                                 ┌───┐     ┌───┐     ┌─────────┐     ┌───────┐                                                                                                  |
+|                                 |VAO|     |EBO|     |UV coords|     |normals|                                                                                                  |
+|                                 └───┘     └───┘     └─────────┘     └───────┘                                                                                                  |
+|                                                                                                                                                                                |
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+=======================================================================================================================================================================================================
+
+    High level overview of runtime procedures
+
+=======================================================================================================================================================================================================
+
+┌─────┬────>┌─────────────────────────────────┬────>┌─────────────────────────────────────────┐
+│Start│     │ Initialize SDL, OpenGL, GX, etc │     │Load scene form argument vector,         │
+└─────┘     └─────────────────────────────────┘     │Allocate space for Scenes, Entities,     ├────┐
+                                                    │Models, etc. Then parse out relevant data│    │
+                                                    └─────────────────────────────────────────┘    │
+                                                                                                   │
+                                                   ┌─────────────────────────────────────────┐     │
+                                                   │                Game Loop                │     │
+                                                   ├─────────────────────────────────────────┤     │
+                                                   │ Y              N                        │     │
+                 ┌───────────────────────┐←────────┼───┬─────┐────────────→┌─────────────┐<──┼─────┘
+                 │                       │         │   │quit?│             │Process Input│   │
+                 │ Deallocate everything │         │   └─────┘             └──────┬──────┘   │
+                 │                       │         │      ↑                       │          │
+                 └───────────┬───────────┘         │      │                       │          │
+                             │                     │      │                       ↓          │
+                             │                     │ ┌────┴─────┐ ←──┬────────────────────┐  │
+                             │                     │ │Draw Calls│    │Process all physics │  │
+                             v                     │ └──────────┘    │ callbacks          │  │
+                        ┌─────────┐                │                 └────────────────────┘  │
+                        │terminate│                │                                         │
+                        └─────────┘                │                                         │
+                                                   │                                         │
+                                                   │                                         │
+                                                   └─────────────────────────────────────────┘
+
+
+
+
+
+
